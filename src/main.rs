@@ -1,45 +1,9 @@
-use inquire::{error::InquireResult,required, Select, Text};
+use inquire::{required, Select, Text};
 use std::fmt;
 use std::process::Command;
 
-fn cli() -> InquireResult<()> {
-    let ctype =get_ctype_flag(get_commit_type());
-    let scope=get_input_value_req("scope", "Define scope of this commit?");
-    let sdesc=get_input_value_req("short_description", "Write short imperative tense description of the change?");
-    let ldesc=get_input_value_req("long_description", "Provide a longer description of the change?");
-    let break_change =get_input_value("breaking_change", "list any breaking changes or issues closed by this change");
 
-    let cmd =format!("\"{}({}): {} \n {} \n {}\"", ctype, scope, sdesc, ldesc, break_change);
-
-    Command::new("git")
-    .args(["commit","-m",&cmd])
-    .output()
-    .expect("failed to execute process");
-
-    println!("git commit -m {}",cmd);
-    
-    Ok(())
-}
-
-fn get_ctype_flag(ctype: CommitType) -> String {
-    match ctype {
-        CommitType::Fix => "fix",
-        CommitType::Feat => "feat",
-        CommitType::Docs => "docs",
-        CommitType::Style => "style",
-        CommitType::Refactor => "refactor",
-        CommitType::Perf => "perf",
-        CommitType::Test => "test",
-        CommitType::Build => "build",
-        CommitType::Ci => "ci",
-    }
-    .into()
-}
-
-fn main() {
-    cli();
-}
-
+// enum for selecting commit type
 enum CommitType {
     Fix,
     Feat,
@@ -52,6 +16,7 @@ enum CommitType {
     Ci,
 }
 
+// mapping enum to proper prompt messages
 impl fmt::Display for CommitType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
        match *self {
@@ -68,7 +33,7 @@ impl fmt::Display for CommitType {
     }
 }
 
-
+// get select prompt
 fn get_commit_type() -> CommitType {
     let options = vec![
         CommitType::Fix,
@@ -89,6 +54,7 @@ fn get_commit_type() -> CommitType {
     }
 }
 
+// returns input where input values are not mandatory
 fn get_input_value_req(input: &str,msg: &str) -> String {
     let prompt_val = Text::new(msg).with_validators(&[required!()]).prompt();
     match prompt_val {
@@ -99,12 +65,13 @@ fn get_input_value_req(input: &str,msg: &str) -> String {
     }
 }
 
+// return inputs where input values are mandatory
 fn get_input_value(input: &str,msg: &str) -> String {
     let prompt_val = Text::new(msg).prompt();
     match prompt_val {
         Ok(prompt_val) =>  {
             if input == "breaking_change" && prompt_val.len() != 0{
-                return format!("references:: {}", prompt_val)
+                return format!("\n references:: {}", prompt_val)
             }
             return prompt_val
         },
@@ -112,12 +79,36 @@ fn get_input_value(input: &str,msg: &str) -> String {
     }
 }
 
-/// Commit with a message
-pub fn commit_msg<T: ToString>(m: T) {
-	println!(
-		"git commit -m \"{}\"",
-		m.to_string().replace('"', "\\\"").replace('`', "\\`")
-	);
+// returns flag for git command comparing the specific enum
+fn get_ctype_flag(ctype: CommitType) -> String {
+    match ctype {
+        CommitType::Fix => "fix",
+        CommitType::Feat => "feat",
+        CommitType::Docs => "docs",
+        CommitType::Style => "style",
+        CommitType::Refactor => "refactor",
+        CommitType::Perf => "perf",
+        CommitType::Test => "test",
+        CommitType::Build => "build",
+        CommitType::Ci => "ci",
+    }
+    .into()
 }
 
+fn main() {
+    let ctype =get_ctype_flag(get_commit_type());
+    let scope=get_input_value_req("scope", "Define scope of this commit?");
+    let sdesc=get_input_value_req("short_description", "Write short imperative tense description of the change?");
+    let ldesc=get_input_value_req("long_description", "Provide a longer description of the change?");
+    let break_change =get_input_value("breaking_change", "list any breaking changes or issues closed by this change");
 
+    let cmd =format!("\"{}({}): {} \n {}{}\"", ctype, scope, sdesc, ldesc, break_change);
+
+    // executes git commit command on console
+    Command::new("git")
+    .args(["commit","-m",&cmd])
+    .output()
+    .expect("failed to execute process");
+
+    println!("git commit -m {}",cmd);
+}
